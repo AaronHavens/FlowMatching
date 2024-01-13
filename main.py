@@ -11,10 +11,10 @@ import os
 sns.set_theme()
 
 def main():
-    N = 5000
+    N = 10000
     state_dim = 2
     batch_size = 256
-    epochs = 1000
+    epochs = 2000
     data_loader = get_circle_dataset(N, batch_size)
 
     vf = simpleVF(state_dim)
