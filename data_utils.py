@@ -71,5 +71,5 @@ def circle_barrier_cond(x, V):
 	grad_h_x1 = -2*x1
 
 
-	return grad_h_x1 * V[:,0] + circle_barrier(x)
+	return grad_h_x1 * V[:,0] + 10.*circle_barrier(x)
 

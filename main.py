@@ -12,7 +12,7 @@ sns.set_theme()
 
 def cbf_loss(x, Yi_hat, Yi, MSE):
     loss = MSE(Yi_hat, Yi)
-    cbf_loss = 10*circle_barrier_cond(x, Yi_hat)
+    cbf_loss = circle_barrier_cond(x, Yi_hat)
     loss += torch.nn.functional.relu(-cbf_loss).sum()
 
     return loss
@@ -97,9 +97,13 @@ def main():
             ax.set_xlim([-1.5,1.5])
             ax.set_ylim([-1.5,1.5])
             ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
-            ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-')
+            ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-', label='constraint |x| <= 1/2')
+
+            circle = plt.Circle((0, 0), 1.0, color='black', fill=False, label='target')
+            ax.add_patch(circle)
             ax.scatter(trajs[:,:,i,0], trajs[:,:,i,1],c='m')
-            ax.set_title('time: t={}'.format(i/steps))
+            ax.legend(loc=1)
+            ax.set_title('time: t={}'.format((i+1)/steps))
             plt.savefig('./snapshots/step_{}.png'.format(i), bbox_inches='tight')
             plt.close()
 
