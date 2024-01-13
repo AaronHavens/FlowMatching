@@ -12,7 +12,7 @@ sns.set_theme()
 
 def cbf_loss(x, Yi_hat, Yi, MSE):
     loss = MSE(Yi_hat, Yi)
-    cbf_loss = circle_barrier_cond(x, Yi_hat)
+    cbf_loss = 10*circle_barrier_cond(x, Yi_hat)
     loss += torch.nn.functional.relu(-cbf_loss).sum()
 
     return loss
