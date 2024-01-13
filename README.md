@@ -3,7 +3,7 @@ Based on <a href="https://arxiv.org/abs/2311.13443">Guided Flows for Generative 
 
 $$
 \begin{align*}
-\mathcal{C} = \{x \in \mathbb{R}^d : h(x) \geq 0 \},\quad \dot h(x(t)) \geq -\alpha(h(x(t))) \implies x(t) \in \mathcal{C},\quad \forall t \geq 0
+\mathcal{C} = {x \in \mathbb{R}^d : h(x) \geq 0 },\quad \dot h(x(t)) \geq -\alpha(h(x(t))) \implies x(t) \in \mathcal{C},\quad \forall t \geq 0
 \end{align*}
 $$
 
