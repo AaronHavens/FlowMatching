@@ -73,3 +73,19 @@ def circle_barrier_cond(x, V):
 
 	return grad_h_x1 * V[:,0] + 10.*circle_barrier(x)
 
+def neg_circle_barrier(x):
+	x1 = x[:,0]
+	x2 = x[:,1]
+
+	return torch.square(x1) + torch.square(x2-0.5) - 0.25**2
+
+def neg_circle_barrier_cond(x, V):
+	x1 = x[:,0]
+	x2 = x[:,1]
+
+	grad_h_x1 = 2*x1
+	grad_h_x2 = 2*(x2-0.5)
+
+	return grad_h_x1 * V[:,0] + grad_h_x2 * V[:,1] + 10. * neg_circle_barrier(x) 
+
+
