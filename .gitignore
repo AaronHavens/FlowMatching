@@ -1,2 +1,5 @@
 __pycache__/
 snapshots/
+
+.DS_Store
+.DS_Store?
