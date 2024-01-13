@@ -98,7 +98,7 @@ def main():
         for j in range(steps):
             filename = './snapshots/step_{}.png'.format(j)
             images.append(imageio.imread(filename))
-        imageio.mimsave('./circle_flow.gif', images,)
+        imageio.mimsave('./assets/circle_flow.gif', images,)
                 
     def eval_vector_field():
         vf.train=False
