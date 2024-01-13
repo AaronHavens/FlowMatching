@@ -76,8 +76,8 @@ def main():
         vf.train=False
         nx, ny = (20, 20)
         steps = 50
-        x = np.linspace(-1.0, 1.0, nx)
-        y = np.linspace(-1.0, 1.0, ny)
+        x = np.linspace(-0.1, 0.1, nx)
+        y = np.linspace(-0.1, 0.1, ny)
 
         xv, yv = np.meshgrid(x, y, indexing='ij')
         trajs = np.zeros((nx,ny,steps,2))

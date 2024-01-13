@@ -31,7 +31,7 @@ def generate_circle_flow(N):
 	# iterative sampling for now (for my sanity)
 	for i in range(N):
 		t = np.random.uniform(0,1)
-		x_0 = np.random.uniform(-1.0,1.0, size=(2,))
+		x_0 = np.random.uniform(-0.1,0.1, size=(2,))
 
 		# uniform random sample on S1
 		x_1 = np.random.normal(0,1, size=(2,))
