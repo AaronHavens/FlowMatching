@@ -12,7 +12,7 @@ sns.set_theme()
 
 def cbf_loss(x, Yi_hat, Yi, MSE):
     loss = MSE(Yi_hat, Yi)
-    cbf_loss = circle_barrier_cond(x, Yi_hat)
+    cbf_loss = neg_circle_barrier_cond(x, Yi_hat)
     loss += torch.nn.functional.relu(-cbf_loss).sum()
 
     return loss
@@ -22,14 +22,14 @@ def main():
     N = 10000
     state_dim = 2
     batch_size = 256
-    epochs = 5000
+    epochs = 1000
     data_loader = get_circle_dataset(N, batch_size)
 
     vf = simpleVF(state_dim)
 
     mse_loss_fn = nn.MSELoss()
     
-    optimizer = torch.optim.Adam(vf.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(vf.parameters(), lr=1e-3)
 
     def train(epoch):
         vf.train = True
@@ -92,17 +92,17 @@ def main():
             os.makedirs('./snapshots')
 
         for i in range(steps):
-            fig, ax = plt.subplots(figsize=(10,10))
+            fig, ax = plt.subplots(figsize=(6,6))
             ax.axis('equal')
             ax.set_xlim([-1.5,1.5])
             ax.set_ylim([-1.5,1.5])
-            ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
-            ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-', label='constraint |x| <= 1/2')
-            #circle_cons = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y-0.5)^2 >= 0.25^2')
+            #ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
+            #ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-', label='constraint |x| <= 1/2')
+            circle_cons = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y-0.5)^2 >= 0.25^2')
             circle = plt.Circle((0., 0.), 1.0, color='black', fill=False, label='target')
             ax.add_patch(circle)
-            #ax.add_patch(circle_cons)
-            ax.scatter(trajs[:,:,i,0], trajs[:,:,i,1],c='m')
+            ax.add_patch(circle_cons)
+            ax.scatter(trajs[:,:,i,0], trajs[:,:,i,1],c='m', s=5)
             ax.legend(loc=1)
             ax.set_title('time: t={}'.format((i+1)/steps))
             plt.savefig('./snapshots/step_{}.png'.format(i), bbox_inches='tight')
@@ -113,7 +113,7 @@ def main():
         for j in range(steps):
             filename = './snapshots/step_{}.png'.format(j)
             images.append(imageio.imread(filename))
-        imageio.mimsave('./assets/circle_flow_wall_const.gif', images,)
+        imageio.mimsave('./assets/circle_flow_hole_const.gif', images,)
                 
     def eval_vector_field():
         vf.train=False
