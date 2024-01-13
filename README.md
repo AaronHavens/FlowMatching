@@ -1,4 +1,4 @@
-## Flow matching from uniform distribution to a circle.
+## Simulation-free flow matching with constraints.
 Based on <a href="https://arxiv.org/abs/2311.13443">Guided Flows for Generative Modeling and Decision Making</a>, Q. Zheng, M. Le, N. Shaul, Y. Lipman, A. Grover, R. T. Q. Chen 2023. 
 
 
