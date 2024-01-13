@@ -31,7 +31,7 @@ def generate_circle_flow(N):
 	# iterative sampling for now (for my sanity)
 	for i in range(N):
 		t = np.random.uniform(0,1)
-		x_0 = np.random.uniform(-0.1,0.1, size=(2,))
+		x_0 = np.random.uniform(-1.,1., size=(2,))
 
 		# uniform random sample on S1
 		x_1 = np.random.normal(0,1, size=(2,))
@@ -71,7 +71,7 @@ def circle_barrier_cond(x, V):
 	grad_h_x1 = -2*x1
 
 
-	return grad_h_x1 * V[:,0] + 10.*circle_barrier(x)
+	return grad_h_x1 * V[:,0] + 1.*circle_barrier(x)
 
 def neg_circle_barrier(x):
 	x1 = x[:,0]

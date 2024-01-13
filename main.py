@@ -12,7 +12,7 @@ sns.set_theme()
 
 def cbf_loss(x, Yi_hat, Yi, MSE):
     loss = MSE(Yi_hat, Yi)
-    cbf_loss = neg_circle_barrier_cond(x, Yi_hat)
+    cbf_loss = circle_barrier_cond(x, Yi_hat)
     loss += torch.nn.functional.relu(-cbf_loss).sum()
 
     return loss
@@ -76,8 +76,8 @@ def main():
         vf.train=False
         nx, ny = (20, 20)
         steps = 50
-        x = np.linspace(-0.1, 0.1, nx)
-        y = np.linspace(-0.1, 0.1, ny)
+        x = np.linspace(-1, 1, nx)
+        y = np.linspace(-1, 1, ny)
 
         xv, yv = np.meshgrid(x, y, indexing='ij')
         trajs = np.zeros((nx,ny,steps,2))
@@ -96,12 +96,12 @@ def main():
             ax.axis('equal')
             ax.set_xlim([-1.5,1.5])
             ax.set_ylim([-1.5,1.5])
-            #ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
-            #ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-', label='constraint |x| <= 1/2')
-            circle_cons = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y-0.5)^2 >= 0.25^2')
+            ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
+            ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-', label='constraint |x| <= 1/2')
+            #circle_cons = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y-0.5)^2 >= 0.25^2')
             circle = plt.Circle((0., 0.), 1.0, color='black', fill=False, label='target')
             ax.add_patch(circle)
-            ax.add_patch(circle_cons)
+            #ax.add_patch(circle_cons)
             ax.scatter(trajs[:,:,i,0], trajs[:,:,i,1],c='m', s=5)
             ax.legend(loc=1)
             ax.set_title('time: t={}'.format((i+1)/steps))
@@ -113,7 +113,7 @@ def main():
         for j in range(steps):
             filename = './snapshots/step_{}.png'.format(j)
             images.append(imageio.imread(filename))
-        imageio.mimsave('./assets/circle_flow_hole_const.gif', images,)
+        imageio.mimsave('./assets/circle_flow_wall_const.gif', images,)
                 
     def eval_vector_field():
         vf.train=False
