@@ -61,11 +61,15 @@ def get_circle_dataset(N, batch_size=64):
 	return dataloader
 
 
-# def circle_barrier(x):
-# 	x1 = x[:,0]
-# 	x2 = x[:,1]
+def circle_barrier(x):
+	x1 = x[:,0]
 
-# 	return torch.square(x1) + torch.square(x2-0.25) - 0.25**2
+	return -torch.square(x1) + 0.5**2
 
-# def circle_barrier_dt(x, vf):
+def circle_barrier_cond(x, V):
+	x1 = x[:,0]
+	grad_h_x1 = -2*x1
+
+
+	return grad_h_x1 * V[:,0] + circle_barrier(x)
 

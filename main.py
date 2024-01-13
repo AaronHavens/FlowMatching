@@ -10,6 +10,14 @@ import os
 # Apply the default theme
 sns.set_theme()
 
+def cbf_loss(x, Yi_hat, Yi, MSE):
+    loss = MSE(Yi_hat, Yi)
+    cbf_loss = circle_barrier_cond(x, Yi_hat)
+    loss += torch.nn.functional.relu(-cbf_loss).sum()
+
+    return loss
+
+
 def main():
     N = 10000
     state_dim = 2
@@ -19,7 +27,7 @@ def main():
 
     vf = simpleVF(state_dim)
 
-    loss_fn = nn.MSELoss()
+    mse_loss_fn = nn.MSELoss()
     
     optimizer = torch.optim.Adam(vf.parameters(), lr=1e-3)
 
@@ -37,7 +45,7 @@ def main():
             Yi_hat = vf(Xi)
 
             # Compute the loss and its gradients
-            loss = loss_fn(Yi_hat, Yi)
+            loss = cbf_loss(Xi, Yi_hat, Yi, mse_loss_fn)
             loss.backward()
 
             # Adjust learning weights
@@ -88,6 +96,8 @@ def main():
             ax.axis('equal')
             ax.set_xlim([-1.5,1.5])
             ax.set_ylim([-1.5,1.5])
+            ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
+            ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-')
             ax.scatter(trajs[:,:,i,0], trajs[:,:,i,1],c='m')
             ax.set_title('time: t={}'.format(i/steps))
             plt.savefig('./snapshots/step_{}.png'.format(i), bbox_inches='tight')
