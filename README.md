@@ -4,4 +4,4 @@ Based on <a href="https://arxiv.org/abs/2311.13443">Guided Flows for Generative 
 
 Here we are matching the linear flow: x1-x0 with no guidance.
 
-![alt text](https://github.com/AaronHavens/FlowMatching/blob/main/circle_flow.gif?raw=true)
+![alt text](https://github.com/AaronHavens/FlowMatching/blob/main/assets/circle_flow.gif?raw=true)
