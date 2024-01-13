@@ -5,7 +5,7 @@ We can enforce a constraint via barrier functions on the vector-fields to acheiv
 
 $$
 \begin{align*}
-\mathcal{C} = `\{x \in \mathbb{R}^d : h(x) \geq 0 `\},\quad \nabla_x h \cdot f(x(t), t) \geq -\alpha(h(x(t))) \implies x(t) \in \mathcal{C},\quad \forall t \geq 0
+\mathcal{C} = \\{x \in \mathbb{R}^d : h(x) \geq 0 \\},\quad \nabla_x h \cdot f(x(t), t) \geq -\alpha(h(x(t))) \implies x(t) \in \mathcal{C},\quad \forall t \geq 0
 \end{align*}
 $$
 
