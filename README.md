@@ -6,6 +6,7 @@ We can enforce a constraint on our learned vector field $f(x,t)$ via barrier fun
 $$
 \begin{align*}
 \nabla_x h(x)^\top f(x,t) \geq -\alpha h(x) \quad \forall (x,t) \in \mathcal{C}\times [0,1]
+\end{align*}
 $$
 
 
