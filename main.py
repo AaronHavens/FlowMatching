@@ -12,7 +12,7 @@ sns.set_theme()
 
 def cbf_loss(x, Yi_hat, Yi, MSE):
     loss = MSE(Yi_hat, Yi)
-    cbf_loss = circle_barrier_cond(x, Yi_hat)
+    cbf_loss = wall_barrier_cond(x, Yi_hat)
     loss += torch.nn.functional.relu(-cbf_loss).sum()
 
     return loss
@@ -76,8 +76,8 @@ def main():
         vf.train=False
         nx, ny = (20, 20)
         steps = 50
-        x = np.linspace(-1, 1, nx)
-        y = np.linspace(-1, 1, ny)
+        x = np.linspace(-1.0, 1.0, nx)
+        y = np.linspace(-1.0, 1.0, ny)
 
         xv, yv = np.meshgrid(x, y, indexing='ij')
         trajs = np.zeros((nx,ny,steps,2))

@@ -1,11 +1,11 @@
 ## Simulation-free flow matching with constraints.
 Based on <a href="https://arxiv.org/abs/2311.13443">Guided Flows for Generative Modeling and Decision Making</a>, Q. Zheng, M. Le, N. Shaul, Y. Lipman, A. Grover, R. T. Q. Chen 2023.
 
-We can enforce a constraint on our learned vector field $f(x,t)$ via barrier functions on to acheive forward set-invariance wrt the set $\mathcal{C}$.
+We can enforce a constraint on our learned vector field $f(x,t)$ via barrier functions on to acheive forward set-invariance wrt the set $\mathcal{C} = \\{x \in \mathbb{R}^d : h(x) \geq 0 \\}$.
 
 $$
 \begin{align*}
-\mathcal{C} = \\{x \in \mathbb{R}^d : h(x) \geq 0 \\},\quad \nabla_x h(x)^\top f(x,t) \geq -\alpha h(x) \quad \forall (x,t) \in \mathcal{C}\times [0,1] \implies x(t) \in \mathcal{C},\quad \forall t \in [0,1]
+\nabla_x h(x)^\top f(x,t) \geq -\alpha h(x) \quad \forall (x,t) \in \mathcal{C}\times [0,1] \implies x(t) \in \mathcal{C},\quad \forall t \in [0,1]
 \end{align*}
 $$
 
