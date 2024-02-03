@@ -25,13 +25,13 @@ Here we are matching the time-varying vector-field: $\dot x(t) = x_1-x_0$ with n
 
 Notice that because we are matching a linear interpolant $x_t = (1-t)x_0 - t x_1$, the flow lines will not go behind the hole constraint. We can change that.
 
-### Example 3: Bezier Interpolants $x^2 + (y-0.5)^2 \geq 0.25^2$
+### Example 3: Bezier Interpolants
 
 Rather than using a linear interpolant, we can use nonlinear Bezier paths. In particular, we use a cubic Bezier curve and learn the control points from data. Given end points $x_0, x_1$ we parameterize a simple NN $f_\theta$ to give us the intermediate control points $(z_0,z_1) = f_\theta(x_0, x_1)$. Then our interpolants and cooresponding velocity fields are given by:
 
 $$
 \begin{align*}
-x_t = (1-t)^3 x_0 + 3 (1-t)^2 t z_0 + 3 (1-t)  t^2 z_1 + t^3 * x_1
+x_t = (1-t)^3 x_0 + 3 (1-t)^2 t z_0 + 3 (1-t)  t^2 z_1 + t^3  x_1\\
 \dot x_t = 3 (1-t)^2 (z_0-x_0) + 6 (1-t) t (z_1-z_0) + 3 t^2 (x_1-z_1)
 \end{align*}
 $$
