@@ -23,10 +23,10 @@ def main():
     state_dim = 2
     batch_size = 64
     iterations = 500000
-    train_mode = True
+    train_mode = False
     vf = simpleVF(state_dim)
-    interp = BezierInterpolant3(state_dim)
-    #interp = LinearInterpolant()
+    #interp = BezierInterpolant3(state_dim)
+    interp = LinearInterpolant()
     mse_loss_fn = nn.MSELoss()
     
     optimizer = torch.optim.Adam(list(vf.parameters())+list(interp.parameters()), lr=1e-4)
@@ -58,7 +58,7 @@ def main():
 
         torch.save(vf.state_dict(), './checkpoints/bezier_hole_model.pt')
     else:
-        vf.load_state_dict(torch.load('./checkpoints/interpolant_model.pt'))
+        vf.load_state_dict(torch.load('./checkpoints/linear_wall_model.pt'))
 
     def simulate(x0, steps=50):
         def dxdt(y, t):
@@ -91,14 +91,14 @@ def main():
             ax.axis('equal')
             ax.set_xlim([-1.5,1.5])
             ax.set_ylim([-1.5,1.5])
-            #ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
-            #ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-', label='constraint |x| <= 1/2')
-            circle_cons = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y-0.5)^2 >= 0.25^2')
+            ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
+            ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-', label='constraint |x| <= 1/2')
+            #circle_cons = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y-0.5)^2 >= 0.25^2')
             circle = plt.Circle((0., 0.), 1.0, color='black', fill=False, label='target')
             ax.add_patch(circle)
-            ax.add_patch(circle_cons)
+            #ax.add_patch(circle_cons)
             ax.scatter(trajs[:,i,0], trajs[:,i,1],c='m', s=5)
-            #ax.legend(loc=1)
+            ax.legend(loc=1)
             ax.set_title('time: t={}'.format((i+1)/steps))
             plt.savefig('./snapshots/step_{}.png'.format(i))#, bbox_inches='tight')
             plt.close()
@@ -109,7 +109,7 @@ def main():
             filename = './snapshots/step_{}.png'.format(j)
             images.append(imageio.imread(filename))
             #print(images[j].shape)
-        imageio.mimsave('./assets/bezier_circle_flow_hole.gif', images, loop=10)
+        imageio.mimsave('./assets/linear_circle_flow_wall.gif', images, loop=20)
                 
     def eval_vector_field():
         vf.train=False
