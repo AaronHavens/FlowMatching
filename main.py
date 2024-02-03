@@ -109,7 +109,7 @@ def main():
             filename = './snapshots/step_{}.png'.format(j)
             images.append(imageio.imread(filename))
             #print(images[j].shape)
-        imageio.mimsave('./assets/bezier_circle_flow_hole.gif', images,)
+        imageio.mimsave('./assets/bezier_circle_flow_hole.gif', images, loop=10)
                 
     def eval_vector_field():
         vf.train=False
