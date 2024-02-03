@@ -1,5 +1,5 @@
 __pycache__/
 snapshots/
-
+checkpoints/
 .DS_Store
 .DS_Store?

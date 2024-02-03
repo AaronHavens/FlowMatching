@@ -12,55 +12,53 @@ sns.set_theme()
 
 def cbf_loss(x, Yi_hat, Yi, MSE):
     loss = MSE(Yi_hat, Yi)
-    cbf_loss = wall_barrier_cond(x, Yi_hat)
+    cbf_loss = hole_barrier_cond(x, Yi_hat)
+    #cbf_loss = wall_barrier_cond(x, Yi_hat)
     loss += torch.nn.functional.relu(-cbf_loss).sum()
 
     return loss
 
 
 def main():
-    N = 10000
     state_dim = 2
-    batch_size = 256
-    epochs = 1000
-    data_loader = get_circle_dataset(N, batch_size)
-
+    batch_size = 64
+    iterations = 500000
+    train_mode = True
     vf = simpleVF(state_dim)
-
+    interp = BezierInterpolant3(state_dim)
+    #interp = LinearInterpolant()
     mse_loss_fn = nn.MSELoss()
     
-    optimizer = torch.optim.Adam(vf.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(list(vf.parameters())+list(interp.parameters()), lr=1e-4)
 
-    def train(epoch):
+    def train(iteration):
         vf.train = True
+        interp.train = True
         running_loss = 0
-        for i, data in enumerate(data_loader):
-            # Every data instance is an input + label pair
-            Xi, Yi = data
+        optimizer.zero_grad()
 
-            # Zero your gradients for every batch!
-            optimizer.zero_grad()
+        Xi, Yi = generate_circle_flow(interp,batch_size)
+        Xi, Yi
+        Yi_hat = vf(Xi)
 
-            # Make predictions for this batch
-            Yi_hat = vf(Xi)
+        loss = cbf_loss(Xi, Yi_hat, Yi, mse_loss_fn)
+        loss.backward()
 
-            # Compute the loss and its gradients
-            loss = cbf_loss(Xi, Yi_hat, Yi, mse_loss_fn)
-            loss.backward()
+        optimizer.step()
 
-            # Adjust learning weights
-            optimizer.step()
+        running_loss += loss.item()
 
-            # Gather data and report
-            running_loss += loss.item()
+        return running_loss/batch_size
 
-        return running_loss/i
+    if train_mode:
+        t = trange(iterations, desc='loss:', leave=True)
+        for j in t:
+            epoch_loss = train(j)
+            t.set_description("loss: {}".format(epoch_loss))
 
-    t = trange(epochs, desc='loss:', leave=True)
-    for j in t:
-        epoch_loss = train(j)
-        t.set_description("loss: {}".format(epoch_loss))
-
+        torch.save(vf.state_dict(), './checkpoints/bezier_hole_model.pt')
+    else:
+        vf.load_state_dict(torch.load('./checkpoints/interpolant_model.pt'))
 
     def simulate(x0, steps=50):
         def dxdt(y, t):
@@ -74,38 +72,35 @@ def main():
 
     def eval():
         vf.train=False
-        nx, ny = (20, 20)
         steps = 50
-        x = np.linspace(-1.0, 1.0, nx)
-        y = np.linspace(-1.0, 1.0, ny)
-
-        xv, yv = np.meshgrid(x, y, indexing='ij')
-        trajs = np.zeros((nx,ny,steps,2))
-        for i in range(nx):
-            for j in range(ny):
-                Xij = [xv[i,j], yv[i,j]]
-                solij = simulate(Xij)
-                #plt.plot(solij[:,0], solij[:,1],c='b')
-                trajs[i,j,:,:] = solij[:,:]
+        N = 1000
+        trajs = np.zeros((N,steps,2))
+        print('evaluating ...')
+        for i in tqdm(range(N)):
+            #Xi = np.random.normal(0,1,size=(2,))*0.2
+            Xi = np.random.uniform(-0.2,0.2,size=(2,))
+            soli = simulate(Xi, steps=steps)
+            #plt.plot(solij[:,0], solij[:,1],c='b')
+            trajs[i,:,:] = soli[:,:]
         
         if not os.path.exists('./snapshots'):
             os.makedirs('./snapshots')
-
-        for i in range(steps):
-            fig, ax = plt.subplots(figsize=(6,6))
+        print('plotting ...')
+        for i in tqdm(range(steps)):
+            fig, ax = plt.subplots(figsize=(6,6))#,dpi = 128)
             ax.axis('equal')
             ax.set_xlim([-1.5,1.5])
             ax.set_ylim([-1.5,1.5])
-            ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
-            ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-', label='constraint |x| <= 1/2')
-            #circle_cons = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y-0.5)^2 >= 0.25^2')
+            #ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
+            #ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-', label='constraint |x| <= 1/2')
+            circle_cons = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y-0.5)^2 >= 0.25^2')
             circle = plt.Circle((0., 0.), 1.0, color='black', fill=False, label='target')
             ax.add_patch(circle)
-            #ax.add_patch(circle_cons)
-            ax.scatter(trajs[:,:,i,0], trajs[:,:,i,1],c='m', s=5)
-            ax.legend(loc=1)
+            ax.add_patch(circle_cons)
+            ax.scatter(trajs[:,i,0], trajs[:,i,1],c='m', s=5)
+            #ax.legend(loc=1)
             ax.set_title('time: t={}'.format((i+1)/steps))
-            plt.savefig('./snapshots/step_{}.png'.format(i), bbox_inches='tight')
+            plt.savefig('./snapshots/step_{}.png'.format(i))#, bbox_inches='tight')
             plt.close()
 
         images = []
@@ -113,27 +108,47 @@ def main():
         for j in range(steps):
             filename = './snapshots/step_{}.png'.format(j)
             images.append(imageio.imread(filename))
-        imageio.mimsave('./assets/circle_flow_wall_const.gif', images,)
+            #print(images[j].shape)
+        imageio.mimsave('./assets/bezier_circle_flow_hole.gif', images,)
                 
     def eval_vector_field():
         vf.train=False
-        nx, ny = (300, 300)
+        nx, ny = (50, 50)
         x = np.linspace(-1.5, 1.5, nx)
         y = np.linspace(-1.5, 1.5, ny)
-
+        steps = 100
         xv, yv = np.meshgrid(x, y, indexing='xy')
-        UV = np.zeros((nx,ny,2))
-        for i in range(nx):
-            for j in range(ny):
-                Xij = torch.Tensor([[xv[i,j], yv[i,j],1]])
-                UV[i,j,:] = vf(Xij).detach().numpy()
-       
-        plt.figure() 
-        plt.xlim([-1.5,1.5])
-        plt.ylim([-1.5,1.5])
-        plt.streamplot(xv, yv, UV[:,:,0], UV[:,:,1], density=2.0, linewidth=None, color='#A23BEC') 
+        ts = np.linspace(0,1,steps)
+        for k, t in enumerate(ts):
+            print(k)
+            UV = np.zeros((nx,ny,2))
+            for i in range(nx):
+                for j in range(ny):
+                    Xij = torch.Tensor([[xv[i,j], yv[i,j],t]])
+                    UV[i,j,:] = vf(Xij).detach().numpy()
+            fig, ax = plt.subplots(figsize=(6,6))#,dpi = 128)
+            ax.axis('equal')
+            ax.set_xlim([-1.5,1.5])
+            ax.set_ylim([-1.5,1.5])
+            circle_cons = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y-0.5)^2 >= 0.25^2')
+            circle = plt.Circle((0., 0.), 1.0, color='black', fill=False, label='target')
+            ax.add_patch(circle)
+            ax.add_patch(circle_cons)
+            ax.streamplot(xv, yv, UV[:,:,0], UV[:,:,1], density=2.0, linewidth=None, color='#A23BEC') 
+            plt.savefig('./snapshots/vf_step_{}.png'.format(k))#, bbox_inches='tight')
+            plt.close()
+
+        images = []
+
+        for k in range(steps):
+            filename = './snapshots/vf_step_{}.png'.format(k)
+            images.append(imageio.imread(filename))
+            #print(images[j].shape)
+        imageio.mimsave('./assets/vf_circle_flow_hole_const.gif', images,)
+
         plt.show()
 
+    #eval_vector_field()
     eval()
 
 

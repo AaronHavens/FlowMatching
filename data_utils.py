@@ -23,20 +23,46 @@ def linear_traj_dt(t, x_0, x_1):
 
 	return alpha_dt*x_1 + sigma_dt*x_0
 
-def generate_circle_flow(N):
 
-	Y = np.zeros((N, 2))
-	X = np.zeros((N, 3))
+def generate_circle_flow(interpolant, batch_size=1):
+	t = torch.rand(size=(batch_size,1))
+	x0 = torch.rand(size=(batch_size,2))*0.4 - 0.2
+	x1 = torch.randn(size=(batch_size,2))
+	x1 = x1/torch.norm(x1,dim=-1, keepdim=True)
 
+	X, Y = interpolant(x0,x1,t)
+	X = torch.cat((X,t), 1)
+	return X, Y
+
+def generate_grid_flow(batch_size=1):
+
+	Y = np.zeros((batch_size, 2))
+	X = np.zeros((batch_size, 3))
+	X_aux = np.zeros((batch_size,2))
 	# iterative sampling for now (for my sanity)
-	for i in range(N):
+	for i in range(batch_size):
 		t = np.random.uniform(0,1)
 		
-		x_0 = np.random.uniform(-1,1, size=(2,))
+		#x_0 = np.random.normal(0,1,size=(2,))*0.2
+		#r_0 = np.random.normal(0,1)**(1/2.)
+		#x_0 = x_0 / np.linalg.norm(x_0)
 
-		# uniform random sample on S1
-		x_1 = np.random.normal(0,1, size=(2,))
-		x_1 = x_1 / np.linalg.norm(x_1)
+		x_0 = np.random.uniform(0,1,size=(2,))
+
+		grid_range = [(0.,0.),(0,2./5),(0, 4./5),
+						(1./5, 1./5), (1./5, 3./5),
+						(2./5,0.),(2./5,2./5),(2./5, 4./5),
+						(3./5, 1./5), (3./5, 3./5),
+						(4./5,0.),(4./5, 2./5),(4./5, 4./5)]
+		j = np.random.randint(0,13)
+		x_11 = np.random.uniform(grid_range[j][1], grid_range[j][1]+1./5)
+		x_12 = np.random.uniform(grid_range[j][0], grid_range[j][0]+1./5)
+		x_1 = np.array([x_11,x_12])
+		#X_aux[i,:] = x_1 
+		# # uniform random sample on unit Disc
+		# x_1 = np.random.normal(0,1, size=(2,))
+		# r_1 = np.random.uniform(0,1)**(1./2.)
+		# x_1 = x_1 / np.linalg.norm(x_1)*r_1
 
 		xt = linear_traj(t, x_0, x_1)
 		dx_dt = linear_traj_dt(t, x_0, x_1)
@@ -45,21 +71,12 @@ def generate_circle_flow(N):
 
 		Y[i, :] = dx_dt
 
+	#plt.scatter(X_aux[:,0], X_aux[:,1],s=0.5)
+	#plt.show()
+	return torch.Tensor(X), torch.Tensor(Y)
 
-	return X, Y
 
 
-def get_circle_dataset(N, batch_size=64):
-
-	X, Y = generate_circle_flow(N)
-
-	tensor_x = torch.Tensor(X) # transform to torch tensor
-	tensor_y = torch.Tensor(Y)
-
-	dataset = TensorDataset(tensor_x,tensor_y) # create datset and loader
-	dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-	return dataloader
 
 
 
