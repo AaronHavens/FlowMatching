@@ -31,8 +31,8 @@ Rather than using a linear interpolant, we can use nonlinear Bezier paths. In pa
 
 $$
 \begin{align*}
-x_t = (1-t)^3 x_0 + 3 (1-t)^2 t z_0 + 3 (1-t)  t^2 z_1 + t^3  x_1\\
-\dot x_t = 3 (1-t)^2 (z_0-x_0) + 6 (1-t) t (z_1-z_0) + 3 t^2 (x_1-z_1)
+x_t &= (1-t)^3 x_0 + 3 (1-t)^2 t z_0 + 3 (1-t)  t^2 z_1 + t^3  x_1\\
+\dot x_t &= 3 (1-t)^2 (z_0-x_0) + 6 (1-t) t (z_1-z_0) + 3 t^2 (x_1-z_1)
 \end{align*}
 $$
 
