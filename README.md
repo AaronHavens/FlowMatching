@@ -39,3 +39,7 @@ $$
 ![alt text](https://github.com/AaronHavens/FlowMatching/blob/main/assets/bezier_circle_flow_hole.gif?raw=true)
 
 With nonlinear interpolants, the flow lines can now go around the hole constraint :).
+
+### Example 4: Double hole constraint :O
+
+![alt text](https://github.com/AaronHavens/FlowMatching/blob/main/assets/bezier_circle_flow_double_hole.gif?raw=true)

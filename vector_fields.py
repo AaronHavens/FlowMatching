@@ -88,17 +88,18 @@ def wall_barrier_cond(x, V):
 
     return grad_h_x1 * V[:,0] + 10.*wall_barrier(x)
 
-def hole_barrier(x):
+def hole_barrier(x, c, r):
     x1 = x[:,0]
     x2 = x[:,1]
 
-    return torch.square(x1) + torch.square(x2-0.5) - 0.25**2
+    return torch.square(x1-c[0]) + torch.square(x2-c[1]) - r**2
 
-def hole_barrier_cond(x, V):
+def hole_barrier_cond(x, c, r, V):
     x1 = x[:,0]
     x2 = x[:,1]
 
-    grad_h_x1 = 2*x1
-    grad_h_x2 = 2*(x2-0.5)
+    grad_h_x1 = 2*(x1-c[0])
+    grad_h_x2 = 2*(x2-c[1])
 
-    return grad_h_x1 * V[:,0] + grad_h_x2 * V[:,1] + 10. * hole_barrier(x) 
+    return grad_h_x1 * V[:,0] + grad_h_x2 * V[:,1] + 10. * hole_barrier(x, c, r)
+
