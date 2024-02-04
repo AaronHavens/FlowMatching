@@ -12,12 +12,12 @@ sns.set_theme()
 
 def cbf_loss(x, Yi_hat, Yi, MSE):
     loss = MSE(Yi_hat, Yi)
-    cbf_loss_1 = hole_barrier_cond(x, [0., 0.5], 0.25, Yi_hat)
-    #cbf_loss = wall_barrier_cond(x, Yi_hat)
+    #cbf_loss_1 = hole_barrier_cond(x, [0., 0.5], 0.25, Yi_hat)
+    cbf_loss_1 = wall_barrier_cond(x, Yi_hat)
     loss += torch.nn.functional.relu(-cbf_loss_1).sum()
 
-    cbf_loss_2 = hole_barrier_cond(x, [0., -0.5], 0.25, Yi_hat)
-    loss += torch.nn.functional.relu(-cbf_loss_2).sum()
+    #cbf_loss_2 = hole_barrier_cond(x, [0., -0.5], 0.25, Yi_hat)
+    #loss += torch.nn.functional.relu(-cbf_loss_2).sum()
 
     return loss
 
@@ -28,11 +28,11 @@ def main():
     iterations = 500000
     train_mode = True
     vf = simpleVF(state_dim)
-    interp = BezierInterpolant3(state_dim)
-    #interp = LinearInterpolant()
+    #interp = BezierInterpolant3(state_dim)
+    interp = LinearInterpolant()
     mse_loss_fn = nn.MSELoss()
     
-    optimizer = torch.optim.Adam(list(vf.parameters())+list(interp.parameters()), lr=1e-3)
+    optimizer = torch.optim.Adam(list(vf.parameters())+list(interp.parameters()), lr=1e-4)
 
     def train(iteration):
         vf.train = True
@@ -59,7 +59,7 @@ def main():
             epoch_loss = train(j)
             t.set_description("loss: {}".format(epoch_loss))
 
-        torch.save(vf.state_dict(), './checkpoints/bezier_double_hole_model.pt')
+        torch.save(vf.state_dict(), './checkpoints/linear_wall_model.pt')
     else:
         vf.load_state_dict(torch.load('./checkpoints/linear_wall_model.pt'))
 
@@ -76,7 +76,7 @@ def main():
     def eval():
         vf.train=False
         steps = 50
-        N = 1000
+        N = 2000
         trajs = np.zeros((N,steps,2))
         print('evaluating ...')
         for i in tqdm(range(N)):
@@ -94,15 +94,15 @@ def main():
             ax.axis('equal')
             ax.set_xlim([-1.5,1.5])
             ax.set_ylim([-1.5,1.5])
-            #ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
-            #ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-', label='constraint |x| <= 1/2')
-            circle_cons_1 = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y +/- 0.5)^2 >= 0.25^2')
-            circle_cons_2 = plt.Circle((0.,-0.5), 0.25, color='red', fill=False, linestyle='-')
+            ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
+            ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-', label='constraint |x| <= 1/2')
+            #circle_cons_1 = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y +/- 0.5)^2 >= 0.25^2')
+            #circle_cons_2 = plt.Circle((0.,-0.5), 0.25, color='red', fill=False, linestyle='-')
 
             circle = plt.Circle((0., 0.), 1.0, color='black', fill=False, label='target')
             ax.add_patch(circle)
-            ax.add_patch(circle_cons_1)
-            ax.add_patch(circle_cons_2)
+            #ax.add_patch(circle_cons_1)
+            #ax.add_patch(circle_cons_2)
 
             ax.scatter(trajs[:,i,0], trajs[:,i,1],c='m', s=5)
             ax.legend(loc=1)
@@ -116,7 +116,7 @@ def main():
             filename = './snapshots/step_{}.png'.format(j)
             images.append(imageio.imread(filename))
             #print(images[j].shape)
-        imageio.mimsave('./assets/bezier_circle_flow_double_hole.gif', images, loop=20)
+        imageio.mimsave('./assets/linear_circle_flow_wall.gif', images, loop=20)
                 
     def eval_vector_field():
         vf.train=False
