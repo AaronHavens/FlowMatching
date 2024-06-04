@@ -1,11 +1,14 @@
 import torch
 import torch.nn as nn
+from layers import *
+from torch.func import jacrev, vmap
+from torchdiffeq import odeint_adjoint as odeint
 
-
-class simpleVF(nn.Module):
+class SimpleVF(nn.Module):
     def __init__(self, input_dim, hid_dim=128):
-        super(simpleVF, self).__init__()
+        super(SimpleVF, self).__init__()
         # input includes stacked time dimension
+
         activation = nn.ReLU()
         self.net = nn.Sequential(   nn.Linear(input_dim+1, hid_dim),
                                     activation,
@@ -19,6 +22,134 @@ class simpleVF(nn.Module):
         return self.net(x)
 
 
+
+class AffineVF(nn.Module):
+    def __init__(self, input_dim):
+        super().__init__()
+        self.W = nn.Linear(input_dim, input_dim, bias=False)
+
+    def forward(self, x):
+        return self.W(x)
+
+class SimpleAutVF(nn.Module):
+    def __init__(self, input_dim, activation=nn.ReLU, hid_dim=128):
+        super().__init__()
+        # input includes stacked time dimension
+
+        self.net = nn.Sequential(   nn.Linear(input_dim, hid_dim),
+                                    activation(),
+                                    nn.Linear(hid_dim, hid_dim),
+                                    activation(),
+                                    nn.Linear(hid_dim, hid_dim),
+                                    activation(),
+                                    # nn.Linear(hid_dim, hid_dim),
+                                    # activation(),
+                                    # nn.Linear(hid_dim, hid_dim),
+                                    # activation(),
+                                    nn.Linear(hid_dim, input_dim))
+
+    def forward(self, x):
+        return self.net(x)
+
+class DiscreteLinearVF(nn.Module):
+    def __init__(self, input_dim, time_steps=10):
+        super().__init__()
+        # input includes stacked time dimension
+
+        activation = nn.LeakyReLU()
+        self.time_steps = time_steps
+        self.dt = 1/time_steps
+        self.vf_list = nn.ModuleList([AffineVF(input_dim) for j in range(time_steps)])
+
+    def forward(self, x, t):
+        k = int(t//self.dt)
+        return self.vf_list[k](x)
+
+    def integrate(self, x, t):
+        # for j in reversed(range(self.time_steps)):
+        #     x = self.layers[j](x) * self.dt
+        return x + self.vf_list[t](x) * self.dt
+
+class ODEIntModule(nn.Module):
+    def __init__(self, vf):
+        super().__init__()
+        self.vf = vf
+
+    def forward(self, t, x):
+        return self.vf(x)
+        
+
+class DiscreteSimpleVF(nn.Module):
+    def __init__(self, input_dim, time_steps=10):
+        super().__init__()
+        # input includes stacked time dimension
+
+        activation = nn.ReLU
+        self.time_steps = time_steps
+        self.dt = 1/time_steps
+        self.vf_list = nn.ModuleList([SimpleAutVF(input_dim, activation) for j in range(time_steps)])
+
+    def forward(self, x, t):
+        k = int(t//self.dt)
+        return self.vf_list[k](x)
+
+    def euler_integrate(self, x, t):
+        # for j in reversed(range(self.time_steps)):
+        #     x = self.layers[j](x) * self.dt
+        return x + self.vf_list[t](x) * self.dt
+
+    def midpoint_integrate(self, x, t):
+        x_mid = x + self.vf_list[t](x) * self.dt / 2
+        return x + self.vf_list[t](x_mid) * self.dt
+
+    def odeint_integrate(self, x, t):
+        #f_t = lambda tau, y : self.vf_list[t](y)
+        f_t = ODEIntModule(self.vf_list[t])
+        y_t = odeint(f_t, x, t=torch.Tensor([0, self.dt]))
+        return y_t[-1]
+
+class LipschitzVF(nn.Module):
+    def __init__(self, input_dim, hid_dim=128):
+        super(LipschitzVF, self).__init__()
+        gamma = 4.0#(2.0)**(1/4)
+        # input includes stacked time dimension
+        activation = nn.ReLU()
+        # self.net = nn.Sequential(   SDPLin(input_dim+1, hid_dim, gamma=gamma),
+        #                             activation,
+        #                             SDPLin(hid_dim, hid_dim, gamma=gamma),
+        #                             activation,
+        #                             SDPLin(hid_dim, hid_dim, gamma=gamma),
+        #                             activation,
+        #                             SDPLin(hid_dim, input_dim, gamma=gamma))
+        self.net = nn.Sequential(   SDPLin(input_dim+1, hid_dim, gamma=gamma),
+                                    activation,
+                                    SDPLin(hid_dim, input_dim, gamma=gamma))
+
+    def forward(self, x):
+        return self.net(x)
+
+class SimpleMap(nn.Module):
+    def __init__(self, input_dim, hid_dim=128):
+        super(SimpleMap, self).__init__()
+        gamma = 10.0#(2.0)**(1/4)
+        # input includes stacked time dimension
+        self.activation = nn.ReLU()
+        self.f1 = nn.Linear(input_dim, hid_dim)
+        self.f2 = nn.Linear(hid_dim, input_dim)
+        self.f3 = nn.Linear(input_dim, hid_dim)
+        self.f4 = nn.Linear(hid_dim, input_dim)
+        self.f5 = nn.Linear(input_dim, hid_dim)
+        self.f6 = nn.Linear(hid_dim, input_dim)
+        self.f7 = nn.Linear(input_dim, hid_dim)
+        self.f8 = nn.Linear(hid_dim, input_dim)
+
+
+    def forward(self, x):
+        x = x + self.f2(F.relu(self.f1(x)))
+        x = x + self.f4(F.relu(self.f3(x)))
+        x = x + self.f6(F.relu(self.f5(x)))
+        x = x + self.f8(F.relu(self.f7(x)))
+        return x
 
 class BezierInterpolant2(nn.Module):
     def __init__(self, state_dim, hid_dim=64):
@@ -41,6 +172,31 @@ class BezierInterpolant2(nn.Module):
         dt_bezier = 2*(1-t)*(x1-x0) + 2*t*(x2-x1)
 
         return bezier, dt_bezier
+
+
+class AddInterpolant(nn.Module):
+    def __init__(self, state_dim, hid_dim=64):
+        super(AddInterpolant, self).__init__()
+
+        activation = nn.ReLU()
+        self.state_dim = state_dim
+        self.fnn = nn.Sequential(nn.Linear(state_dim*2+1, hid_dim),
+                                    activation,
+                                    nn.Linear(hid_dim, hid_dim),
+                                    activation,
+                                    nn.Linear(hid_dim, hid_dim),
+                                    activation,
+                                    nn.Linear(hid_dim, state_dim))
+
+    def forward(self, x0, x1, t):
+        t.requires_grad = True
+        z = torch.cat((x0,x1,t),1)
+        fnn = self.fnn(z)
+        dt_fnn = vmap(jacrev(self.fnn))(z)[:,:,-1]
+        xt = (1-t)*x0 + t*x1 + t*(1-t)*fnn
+        dt_xt = x1 - x0 + (1-t)*fnn - t * fnn + t*(1-t)*dt_fnn
+
+        return xt, dt_xt
 
 class BezierInterpolant3(nn.Module):
     def __init__(self, state_dim, hid_dim=64):
@@ -75,6 +231,7 @@ class LinearInterpolant(nn.Module):
         xt = (1-t)*x0 + t*x1
         dt_xt = x1 - x0
         return xt, dt_xt
+
 
 def wall_barrier(x):
     x1 = x[:,0]

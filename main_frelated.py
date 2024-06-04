@@ -1,5 +1,6 @@
 from data_utils import *
 from vector_fields import *
+from f_related_utils import *
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 from tqdm import tqdm, trange
@@ -12,45 +13,41 @@ sns.set_theme()
 
 def cbf_loss(x, Yi_hat, Yi, MSE):
     loss = MSE(Yi_hat, Yi)
-    #cbf_loss_1 = hole_barrier_cond(x, [0., 0.5], 0.25, Yi_hat)
-    #cbf_loss_1 = wall_barrier_cond(x, Yi_hat)
-    #loss += torch.nn.functional.relu(-cbf_loss_1).sum()
-
-    #cbf_loss_2 = hole_barrier_cond(x, [0., -0.5], 0.25, Yi_hat)
-    #loss += torch.nn.functional.relu(-cbf_loss_2).sum()
 
     return loss
 
 
 def main():
     state_dim = 2
-    batch_size = 1
+    batch_size = 64
     iterations = 50000
     train_mode = True
     scale = 2.0
 
-    vf = SimpleVF(state_dim)
+    #F = Diffeomorpism(state_dim)
+    vf = F_Related_VF(state_dim, n_layers=3, hid_dim=8)
     #vf = LipschitzVF(state_dim)
     #interp = BezierInterpolant3(state_dim)
     interp = LinearInterpolant()
     #interp = AddInterpolant(state_dim)
     mse_loss_fn = nn.MSELoss()
-    
-    optimizer = torch.optim.Adam(list(vf.parameters())+list(interp.parameters()), lr=5e-4)
+    #print(vf)
+    #print(list(vf.parameters()))
+    optimizer = torch.optim.Adam(list(vf.parameters())+list(interp.parameters()), lr=3e-4)
 
     def train(iteration):
         vf.train = True
         interp.train = True
         running_loss = 0
         optimizer.zero_grad()
-        #Xi, Yi = generate_circle_flow(interp,batch_size)
+        Xi, Yi = generate_circle_flow(interp,batch_size, embedding=None, use_t=True)
 
-        Xi, Yi = generate_grid_flow(interp, batch_size, scale=scale)
+        #Xi, Yi = generate_grid_flow(interp, batch_size, scale=scale)
         Yi_hat = vf(Xi)
 
         loss = cbf_loss(Xi, Yi_hat, Yi, mse_loss_fn)
         loss.backward()
-
+        #print(vf.F.grad)
         optimizer.step()
 
         running_loss += loss.item()
@@ -63,13 +60,13 @@ def main():
             epoch_loss = train(j)
             t.set_description("loss: {}".format(epoch_loss))
 
-        torch.save(vf.state_dict(), './checkpoints/add_grid_model.pt')
+        torch.save(vf.state_dict(), './checkpoints/circle_F_related.pt')
     else:
-        vf.load_state_dict(torch.load('./checkpoints/add_grid_model.pt'))
+        vf.load_state_dict(torch.load('./checkpoints/circle_F_related.pt'))
 
     def simulate(x0, steps=50):
         def dxdt(y, t):
-            y_ = torch.Tensor([[y[0], y[1], t]])
+            y_ = torch.Tensor([[y[0], y[1]]])
             return vf(y_).detach().numpy()[0]
 
         sol = odeint(dxdt, x0, np.linspace(0,1,steps))
@@ -80,15 +77,24 @@ def main():
     def eval():
         vf.train=False
         steps = 50
-        N = 5000
+        N = 1000
         trajs = np.zeros((N,steps,2))
         print('evaluating ...')
-        for i in tqdm(range(N)):
-            Xi = np.random.normal(0,1,size=(2,))
-            #Xi = np.random.uniform(-0.2,0.2,size=(2,))
-            soli = simulate(Xi, steps=steps)
+        t = np.linspace(0,1,steps)
+        #Xi = torch.tensor(np.random.uniform(-0.2,0.2,size=(N,2))).float()
+        Xi = torch.randn(size=(N,2))*0.2
+        zeros = torch.zeros(N,1)
+        Xi = torch.cat((Xi,zeros),axis=1)
+
+        #for i in tqdm(range(N)):
+            #Xi = np.random.normal(0,1,size=(2,))
+            #x0 = torch.rand(size=(batch_size,2))*0.4 - 0.2
+            #Xi = torch.tensor(np.random.uniform(-0.2,0.2,size=(1,2))).float()
+        for j in range(steps):
+            trajs[:,j,:] = vf.time_t_flow(Xi, t[j]).detach().numpy()
+            #soli = simulate(Xi, steps=steps)
             #plt.plot(solij[:,0], solij[:,1],c='b')
-            trajs[i,:,:] = soli[:,:]
+            #trajs[i,:,:] = soli[:,:]
         
         if not os.path.exists('./snapshots'):
             os.makedirs('./snapshots')
@@ -104,7 +110,7 @@ def main():
 
             # And a corresponding grid
             #ax.grid(which='both')
-            ax.grid(color='black', linestyle='-', linewidth=2)
+            #ax.grid(color='black', linestyle='-', linewidth=2)
 
 
             #ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
@@ -113,7 +119,8 @@ def main():
             #circle_cons_2 = plt.Circle((0.,-0.5), 0.25, color='red', fill=False, linestyle='-')
 
             #circle = plt.Circle((0., 0.), 1.0, color='black', fill=False, label='target')
-            #ax.add_patch(circle)
+            square = plt.Rectangle((-1.0, -1.0), 2, 2, edgecolor='black', facecolor='none', label='target')
+            ax.add_patch(square)
             #ax.add_patch(circle_cons_1)
             #ax.add_patch(circle_cons_2)
 
@@ -129,7 +136,7 @@ def main():
             filename = './snapshots/step_{}.png'.format(j)
             images.append(imageio.imread(filename))
             #print(images[j].shape)
-        imageio.mimsave('./assets/add_grid_flow.gif', images, loop=20)
+        imageio.mimsave('./assets/circle_F_related.gif', images, loop=20)
                 
     def eval_vector_field():
         vf.train=False
@@ -150,7 +157,7 @@ def main():
             ax.axis('equal')
             ax.set_xlim([-1.5,1.5])
             ax.set_ylim([-1.5,1.5])
-            circle_cons = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y-0.5)^2 >= 0.25^2')
+            #circle_cons = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y-0.5)^2 >= 0.25^2')
             circle = plt.Circle((0., 0.), 1.0, color='black', fill=False, label='target')
             ax.add_patch(circle)
             ax.add_patch(circle_cons)

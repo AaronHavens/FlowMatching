@@ -24,28 +24,27 @@ def cbf_loss(x, Yi_hat, Yi, MSE):
 
 def main():
     state_dim = 2
-    batch_size = 1
-    iterations = 50000
+    batch_size = 256
+    iterations = 100000
     train_mode = True
     scale = 2.0
 
-    vf = SimpleVF(state_dim)
+    #vf = SimpleVF(state_dim)
+    vf = SimpleMap(state_dim)
     #vf = LipschitzVF(state_dim)
     #interp = BezierInterpolant3(state_dim)
-    interp = LinearInterpolant()
+    #interp = LinearInterpolant()
     #interp = AddInterpolant(state_dim)
     mse_loss_fn = nn.MSELoss()
     
-    optimizer = torch.optim.Adam(list(vf.parameters())+list(interp.parameters()), lr=5e-4)
+    optimizer = torch.optim.Adam(list(vf.parameters()), lr=1e-6)
 
     def train(iteration):
         vf.train = True
-        interp.train = True
         running_loss = 0
         optimizer.zero_grad()
         #Xi, Yi = generate_circle_flow(interp,batch_size)
-
-        Xi, Yi = generate_grid_flow(interp, batch_size, scale=scale)
+        Xi, Yi = generate_circle_flow_map(batch_size)
         Yi_hat = vf(Xi)
 
         loss = cbf_loss(Xi, Yi_hat, Yi, mse_loss_fn)
@@ -67,70 +66,43 @@ def main():
     else:
         vf.load_state_dict(torch.load('./checkpoints/add_grid_model.pt'))
 
-    def simulate(x0, steps=50):
-        def dxdt(y, t):
-            y_ = torch.Tensor([[y[0], y[1], t]])
-            return vf(y_).detach().numpy()[0]
-
-        sol = odeint(dxdt, x0, np.linspace(0,1,steps))
-
-        return sol
-
 
     def eval():
         vf.train=False
         steps = 50
         N = 5000
-        trajs = np.zeros((N,steps,2))
+        trajs = np.zeros((N,2))
         print('evaluating ...')
-        for i in tqdm(range(N)):
-            Xi = np.random.normal(0,1,size=(2,))
+        Xi = torch.rand(size=(N,2))*0.4 - 0.2
             #Xi = np.random.uniform(-0.2,0.2,size=(2,))
-            soli = simulate(Xi, steps=steps)
-            #plt.plot(solij[:,0], solij[:,1],c='b')
-            trajs[i,:,:] = soli[:,:]
-        
-        if not os.path.exists('./snapshots'):
-            os.makedirs('./snapshots')
+        sol = vf(Xi)
+        Xi = Xi.detach().numpy()
+        sol = sol.detach().numpy()
+            #plt.plot(solij[:,0], solij[:,1],c='b')     
         print('plotting ...')
-        for i in tqdm(range(steps)):
-            fig, ax = plt.subplots(figsize=(6,6))#,dpi = 128)
-            ax.axis('equal')
-            ax.set_xlim([-1.5,1.5])
-            ax.set_ylim([-1.5,1.5])
-            major_ticks = np.arange(-scale*0.5, scale*0.5 + 0.2*scale, 0.2*scale)
-            ax.set_xticks(major_ticks)
-            ax.set_yticks(major_ticks)
+        fig, ax = plt.subplots(figsize=(6,6))#,dpi = 128)
+        ax.axis('equal')
+        ax.set_xlim([-1.5,1.5])
+        ax.set_ylim([-1.5,1.5])
 
-            # And a corresponding grid
-            #ax.grid(which='both')
-            ax.grid(color='black', linestyle='-', linewidth=2)
-
-
-            #ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
-            #ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-', label='constraint |x| <= 1/2')
+        ax.plot([-0.5,-0.5],[-1.5, 1.5],c='r', linestyle='-')
+        ax.plot([0.5,0.5],[-1.5, 1.5],c='r', linestyle='-', label='constraint |x| <= 1/2')
             #circle_cons_1 = plt.Circle((0.,0.5), 0.25, color='red', fill=False, linestyle='-', label='constraint x^2 + (y +/- 0.5)^2 >= 0.25^2')
             #circle_cons_2 = plt.Circle((0.,-0.5), 0.25, color='red', fill=False, linestyle='-')
 
-            #circle = plt.Circle((0., 0.), 1.0, color='black', fill=False, label='target')
-            #ax.add_patch(circle)
+        circle = plt.Circle((0., 0.), 1.0, color='black', fill=False, label='target')
+        ax.add_patch(circle)
             #ax.add_patch(circle_cons_1)
             #ax.add_patch(circle_cons_2)
 
-            ax.scatter(trajs[:,i,0], trajs[:,i,1],c='m', s=5)
-            #ax.legend(loc=1)
-            ax.set_title('time: t={}'.format((i+1)/steps))
-            plt.savefig('./snapshots/step_{}.png'.format(i))#, bbox_inches='tight')
-            plt.close()
+        ax.scatter(Xi[:,0], Xi[:,1],c='m', s=5,label='initial dist')
+        ax.scatter(sol[:,0], sol[:,1],c='r', s=5,label='final dist')
 
-        images = []
+        ax.legend(loc=1)
+        plt.savefig('./snapshots/map_test.png')#, bbox_inches='tight')
+        plt.close()
 
-        for j in range(steps):
-            filename = './snapshots/step_{}.png'.format(j)
-            images.append(imageio.imread(filename))
-            #print(images[j].shape)
-        imageio.mimsave('./assets/add_grid_flow.gif', images, loop=20)
-                
+
     def eval_vector_field():
         vf.train=False
         nx, ny = (50, 50)
@@ -170,8 +142,6 @@ def main():
 
     #eval_vector_field()
     eval()
-
-
 
 
 if __name__ == "__main__":
